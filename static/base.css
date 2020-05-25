@@ -1,0 +1,40 @@
+/* *表示所有标签 */
+*{
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    margin-top: 60px!important;
+}
+
+ul.navbar-right{
+    margin-right: 0;
+}
+
+/*div.nav{*/
+    /*padding: 10px 5px;*/
+    /*background-color: #eee;*/
+    /*border-bottom: 1px solid #cccccc;*/
+/*}*/
+
+/*div.nav a{*/
+    /*display: inline-block;*/
+    /*!*取消超链接的下划线 *!*/
+    /*text-decoration: none;*/
+    /*color: #000000;*/
+    /*padding: 5px 10px;*/
+/*}*/
+
+/*div.nav a.logo{*/
+    /*display: inline-block;*/
+    /*color: black;*/
+    /*font-size: 120%;*/
+/*}*/
+
+/*body{*/
+    /*background:url("img/44.jpg") no-repeat top;*/
+    /*!*background-size: cover;*!*/
+    /*background-size: 100% auto;*/
+    /*background-attachment: fixed;*/
+/*}*/

@@ -1,0 +1,13 @@
+{#extends 引用这个模板，这个模板引用base，有的就不用再写了 因为就是替换#}
+{#显示模板不需要再写，但是相应传到模板的内容还需要从views中传过来！！！！！#}
+{% extends 'blog/blog_list.html' %}
+
+{% block title %}
+    {{ blogs_with_date }}所包含的博客
+{% endblock %}
+
+{% block blog_list_title %}
+    日期归档：{{ blogs_with_date}}|
+    <a href="{% url 'blog_list' %}">查看全部博客</a>
+{% endblock %}
+

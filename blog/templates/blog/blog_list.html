@@ -1,0 +1,213 @@
+{# templates应该是django中的关键参数，会自动查询templates文件夹#}
+{% extends 'base.html'%}
+{% load staticfiles %}
+{% load comment_tags %}
+{% load like_tags %}
+
+{% block title %}我的网站{% endblock %}
+
+{#选中状态显示#}
+{% block nav_blog_active %}
+    active
+{% endblock %}
+
+{#css样式模板引用#}
+{% block header_extends%}
+{#    下面这么写是错误的！！！！#}
+{#   错误！！！ <link rel="stylesheet" href="/blog/static/blog/blog.css">#}
+    <link rel="stylesheet" href="{% static 'blog/blog.css' %}">
+{% endblock %}
+
+{#显示内容#}
+{% block content %}
+{#    栅格系统#}
+    <div class="container">
+        <div class="row">
+            {#    左边部分    #}
+            {# 栅栏系统共12列，占几列  class="col-sm-8:栅格参数，总共12个列#}
+            <div class="col-sm-12 col-sm-8 col-md-8 col-lg-10">
+                {# 使用面板panel#}
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        {% block blog_list_title %}
+                            博客列表
+                        {% endblock %}
+                    </div>
+
+                    <div class="panel-body">
+{#                    page不传值默认显示第一页 GET传参#}
+                        {% for blog in blogs %}
+                            <div class="blog">
+                                <h3><a href="{% url 'blog_detail' blog.pk %}">{{ blog.title }}</a></h3>
+                                <p class="blog-info">
+                                {# 使用bootstrap组件代替汉字分类：#}
+                                    <span class="glyphicon glyphicon-tag" aria-hidden="true"></span>
+                                    <a href="{% url 'blogs_with_type' blog.blog_type.pk %}">{{ blog.blog_type }}</a>
+                                    &nbsp;&nbsp
+                                    {# 发表日期同上：&nbsp:空格 #}
+                                    <span class="glyphicon glyphicon-time" aria-hidden="true"></span>
+                                    {{ blog.created_time|date:"Y-m-d H:i:s" }}&nbsp;&nbsp
+                                    阅读:({{ blog.get_read_num }})
+                                    {# 使用公用模板 #}
+                                    评论：({% get_comment_count blog%})
+                                    点赞：（{% get_like_count blog %}）
+                                </p>
+                            {# striptags :不显示html代码 safe:会将html代码转换正常文本 进行渲染 #}
+                                <p>{{ blog.content|truncatechars:120|striptags }}</p>
+                            </div>
+                            {# 使博客标题称为一个链接，url为blog_detail，并且要传递一个参数过去 #}
+                        {% empty %}
+                            <div class="blog">
+                                <h3>暂无博客，敬请期待</h3>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {# 显示下面的页码，使用bootstrap框架 好看一点#}
+                {# 使用bootstrap框架#}
+                <div class="paginator">
+                    <ul class="pagination">
+                        <li>
+                            {# 上一页#}
+                            {# page_of_blogs：当前页 #}
+                            {% if page_of_blogs.has_previous %}
+                                <a href="?page={{ page_of_blogs.previous_page_number }}" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            {% else %}
+                                <span aria-label="true">&laquo;</span>
+                            {% endif %}
+                        </li>
+
+                        {# <a href="?page={{ page_num }}">  相对路由 #}
+                        {# 只显示当前页的前后各两页 #}
+                        {% for page_num in page_range %}
+                            {# 判断是否是当前页，当前页面数字点亮 #}
+                            {% if page_num == page_of_blogs.number %}
+                                <li class="active">
+                                    {# 已经是当前页就不再需要链接，链接到当前页了 #}
+                                    {# <a href="?page={{ page_num }}">{{ page_num }}</a>#}
+                                    <span>{{ page_num }}</span>
+                                </li>
+                            {% else %}
+                                {% if page_num == '...' %}
+                                    <li><span>{{ page_num }}</span></li>
+                                {% else %}
+                                    <li>
+                                        <a href="?page={{ page_num }}">{{ page_num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                        <li>
+                            {# 下一页#}
+                            {% if page_of_blogs.has_next %}
+                            {# 相对路由，GET传值方式#}
+                                <a href="?page={{ page_of_blogs.next_page_number }}" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            {% else %}
+                                <span aria-hidden="true">&raquo;</span>
+                            {% endif %}
+                        </li>
+                    </ul>
+                    <p>
+                        共有{{ page_of_blogs.paginator.count }}篇博客，
+                        当前第{{ page_of_blogs.number }}页，
+                        共有{{ page_of_blogs.paginator.num_pages }}页。
+                    </p>
+                </div>
+            </div>
+
+            {#    右边部分    #}
+            {# hidden-xs:栅格系统中响应式布局，在页面超小的时候不显示 #}
+            <div class="hidden-xs col-sm-4 col-md-4 col-lg-2">
+                {# 使用面板panel#}
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        博客分类
+                    </div>
+                    <div class="panel-body">
+                        {# 清除列表前面的黑点: style="list-style-type: none" 放到blog.css文件中#}
+                        <ul class="blog-type" >
+                            {% for blog_type in blog_types %}
+                                <li>
+                                    <a href="{% url 'blogs_with_type' blog_type.pk %}">
+                                        {# 显示博客类别和相应数量#}
+                                        {{ blog_type.type_name }}({{ blog_type.blog_count }}篇)
+                                    </a>
+                                </li>
+                            {% empty %}
+                                <li>暂无分类</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {# 第二个面板 #}
+                <div class="panel panel-default">
+                    <div class="panel-heading">日期归档</div>
+                    <div class="panel-body">
+                        <ul class="blog_date">
+                            {# 字典：blog_dates.items 取出里面的每一项，都是键值对儿 #}
+                            {% for blog_date,blog_count in blog_dates.items %}
+                                <li>
+                                    <a href="{% url 'blogs_with_date' blog_date.year blog_date.month %}">
+                                        {{ blog_date|date:"Y年m月"}}
+                                        ==> 共有{{ blog_count }}篇
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+{% endblock %}
+
+
+
+{# 模板嵌套：区别于基础模板的内容 #}
+{#<title>我的网站</title>#}
+{##}
+{#{% for blog in blogs %}#}
+    {# 使博客标题称为一个链接，url为blog_detail，并且要传递一个参数过去 #}
+{#    <a href="{% url 'blog_detail' blog.pk %}">#}
+{#        <h3>{{ blog.title }}</h3>#}
+{#    </a>#}
+{#    <p>{{ blog.content|truncatechars:30 }}</p>#}
+{##}
+{# 判断数据是否为空 #}
+{#{% empty %}#}
+{#    <p>---暂无博客，敬请期待---</p>#}
+{#{% endfor %}#}
+{##}
+{# 两种方法，第一种是过滤器 #}
+{#<p>一共有{{ blogs|length }}篇博客</p>#}
+{# 下面这是自己写的，从views传过来的 #}
+{#  一共有{{ blogs_count}}篇博客 #}
+
+
+{#2. static文件的路径编写：#}
+{#下面这么写static的路径是错误的！！！#}
+{#<link rel="stylesheet" href="/blog/static/blog/blog.css">#}
+{#虽然说这么写可以找到相应文件，但是django的查询机制并不是这样#}
+{#在setings中已经设置了两种ststic路径，第一种是自带的，直接指向APP中的static文件夹#}
+{#另一种是自己设定路径的，是在根目录下的static文件夹#}
+{#在寻找static文件时，是会按照这另两种路径寻找的，settings中的顺序是先APP，再自定义，按照顺序来#}
+{#第一种直接写哪个文件就行，第二种需要写路径，得是个url的样子#}
+
+{#（1）在根目录下的static文件夹中，可以下面这么写#}
+{#     <link rel="stylesheet" href="{% static  'base.css'%}">#}
+{#    <link rel="stylesheet" href="/static/base.css">#}
+
+{#（2）但是如果在APP中的static文件夹中，就只能写第一种了 ，绝对不要写相对路径，没用的！！#}
+
+
+{#1. 使用html丰富页面#}
+{#（1）. 简单文本编辑-》后台文本中直接插入html代码#}
+{#（2）. 富文本编辑：最终解析成html =》使用富文本编辑器/markdown编辑器#}
+{#（3）. striptags 过滤器：将文本内容中的html语言过滤掉，区别于safe过滤器 #}

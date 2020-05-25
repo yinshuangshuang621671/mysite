@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}个人资料{% endblock %}
+
+{% block nav_home_active %}active{% endblock %}
+
+{% block content %}
+{#  使用容器栅格布局  #}
+    <div class="container">
+        <div class="row">
+            {# 共12列，占10列，左右各空一列 #}
+            <div class="col-xs-10 col-xs-offset-1">
+            {# 若用户已登录，显示用户信息 #}
+                {% if user.is_authenticated %}
+                    <h2>{{ user.username }}</h2>
+                    <ul>
+                        <!-- 原始：user.profile.nickname 下面是给User对象新增的方法 -->
+                        <li>昵称：{{ user.get_nickname }}&nbsp;&nbsp;
+                            <a href="{% url 'change_nickname' %}?from={{ request.get_full_path }}">
+                                修改昵称</a></li>
+                        <li>邮箱：
+                            {% if user.email %}{{ user.email }}
+                                {% else %}未绑定邮箱
+                                <a href="{% url 'bind_email' %}?from={{ request.get_full_path }}">绑定邮箱</a>
+                            {% endif %}
+                        </li>
+                        <li>上一次登录时间：{{ user.last_login|date:"Y-m-d H:i:s" }}</li>
+                        <li><a href="{% url 'change_password'%}">修改密码</a></li>
+                    </ul>
+                {% else %}
+                    <span>未登录， 跳转到首页...</span>
+                    <script type="text/javascript">
+                        function direct(){
+                            window.location.href = '/';
+                        }
+                        //js中按毫秒，python中按秒计数，所以乘以1000
+                        setTimeout('direct()', 3000);
+                    </script>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+
+{#1. form表单中，action=" "：#}
+{#就指向当前视图，在视图中通过判断method是GET还是POST进行处理#}
+
+{#2. {{ field.id_for_label }}:自定义字段标签的id #}
+
+{# 3. class="pull-left text-danger"  ：使用的是bootstrap的自带样式 #}
+
+

@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+
+{% block title %}
+    我的网站|首页
+{% endblock %}
+
+{% block nav_home_active %}
+{# 点亮首页标志 #}
+    active
+{% endblock %}
+
+{#css 样式替换#}
+{% block header_extends %}
+    <link rel="stylesheet" href="{% static 'home.css' %}">
+{#    <script src="http://cdn.hcharts.cn/highcharts/highcharts.js"></script>#}
+    <script src="{% static 'highcharts.js' %}"></script>
+{% endblock %}
+
+
+{#内容替换#}
+{% block content %}
+{#    设置class="home-content" 使得这个h3有自己独立的编号，不然不知道哪个#}
+{#    1. 第一部分#}
+    <h3 class="home-content">欢迎访问我的网站，随便看看</h3>
+
+{#    2. 第二部分：图表 #}
+    {#  图表容器  #}
+    <div id="container" ></div>
+    <script>
+        //图表配置
+        var options = {
+            chart:{type:'line'},             //指定图表的类型，默认是折线图
+            title:{text:"阅读量图表"},     //标题
+
+            xAxis:{
+                categories:{{ dates|safe }},         //x轴分类
+                tickmarkPlacement:'on',
+                title:{text: '前7日阅读量变化'}
+            },
+
+            yAxis:{
+                title:{text:null},             //y轴标题
+                labels:{enabled:false},
+                gridLineDashStyle:'Dash',
+                },
+            series:[{                                   //数据列
+                name:"阅读量",                         //数据列名
+                data:{{ read_nums }}                      //数据
+            }],
+            plotOptions:{                               //数据标签，每一个节点都显示数据
+                line:{
+                    dataLabels:{
+                        enabled:true
+                    }
+                }
+            },
+            legend: {enabled:false},
+            credits:{enabled:false}, //credits显示的是highcharts.com
+
+        };
+        //图表初始化函数
+        var chart = Highcharts.chart('container', options);
+    </script>
+
+    <div class="hot-data">
+        {# 今天24小时之内的热门博客 #}
+        <h3 >今天热门点击</h3>
+        <ul>
+            {% for hot_data in today_hot_data %}
+                {# content_object 对应的结果是：<Blog: for 28> 直接对应相应的一条数据 #}
+                {# 就可以得到相应的细节数据，主键值，标题，内容啥的 #}
+                <li><a href="{% url 'blog_detail' hot_data.id %}">
+                    {{ hot_data.title }}</a>&nbsp;({{ hot_data.read_num_sum }})</li>
+            {% empty %}
+                <li>今天暂时没有热门博客</li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="hot-data">
+        <h3>昨日热门点击</h3>
+        <ul>
+            {% for hot_data in yesterday_hot_data %}
+                <li><a href="{% url 'blog_detail' hot_data.id %}">
+                    {{ hot_data.title }}</a>&nbsp;({{ hot_data.read_num_sum }})</li>
+            {% empty %}
+                <li>昨日暂时没有热门博客</li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="hot-data">
+        <h3>7天热门点击</h3>
+        <ul>
+            {% for hot_blog in hot_blogs_for_7_days %}
+                <li><a href="{% url 'blog_detail' hot_blog.id %}">
+                    {{ hot_blog.title }}</a>&nbsp;({{ hot_blog.read_num_sum}})</li>
+            {% empty %}
+                <li>7天内暂时没有热门博客</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+{% endblock %}
+
+
+
+{# 下面为测试代码：测试replace及正则表达式 #}
+{% block replace %}
+    <button id="replace" class="btn btn-primary">
+        replace作用
+    </button>
+{% endblock %}
+
+{% block replace_extend %}
+    <script type="text/javascript">
+        $("#replace").click(function () {
+            //第一部分
+            {#var s = prompt("请输入要查找的字符", "人");#}
+            {#// string_obj整个字符串里面的都是单个字符，查找的时候需要加“”#}
+            {#var string_obj = "中国人民共和国，中国人民";#}
+            {##}
+            {#//第一个参数需要使用小括号括起来，表示分组？？？#}
+            {#//这里小括号没有使用转义字符，就表示查找的内容只有s，不包括括号#}
+            {#var reg = new RegExp("("+ s +")", "g");#}
+            {#console.log(reg);#}
+            {#// <font color=red>$1</font> 对正则第一个匹配对象进行修饰#}
+            {#var newstr = string_obj.replace(reg, "<font color=red>$1</font>");#}
+            {#//alert 会有一个弹出框显示信息#}
+            {#//alert(newstr);#}
+            {#document.write(newstr);#}
+            {#console.log(newstr);#}
+
+
+            //第二部分
+            {#function test() {#}
+            {#    for (var i = 0; i < arguments.length; i++){#}
+            {#        alert("第"+(i+1)+"个参数的值" + arguments[i])#}
+            {#    }#}
+            {##}
+            {#var reg = new RegExp("\\d", "g");#}
+            {#var str = "adb1afa4sdf";#}
+            {#str.replace(reg, test)#}
+            {##}
+
+            //第三部分
+            function test($1) {
+                //这是返回一个字符串啊
+                return "<font color='red'>" + $1 + "</font>"
+                }
+            var s = prompt("请输入要查找的字符", "人");
+            //
+            var str = "中华人民共和国，人民共和国";
+            //为什么s两边要加括号呢？
+            //这里写的和第一部分还是有点区别，括号还是加上吧。。
+            var reg = new RegExp("("+ s +")", "g");
+            console.log(reg);
+            //replace不仅能替换字符串，还能改变样式呢
+            var newstr = str.replace(reg, test);
+            console.log(newstr);
+            document.write(newstr)
+        })
+    </script>
+{% endblock %}
+
+
+{# 异步处理 #}
+{% block script_extend %}
+{% endblock %}
+
+
+{# 1. 这个页面展示的内容是基于base.html的，就是公用一个模板文件#}
+{#而link需要写在head中，然而并没有，就类似调用模板文件那样#}
+{#用一个block块将要展示的style替换到模板文件的head中！！#}
+
+{# 2. style格式设置：#}
+{# <style type="text/css"> #}
+        {# ...;...;...; #}
+{# </style> #}
+
+{# 3. 模板显示的context 会自动去寻找相应的views处理函数 - home()#}
+
+
+<!-- 4. js.replace  及正则表达式（简单的）
+在上边的代码中，函数function内部中有一个arguments集合，存储了当前函数的所有参数
+在第二部分代码中，网页的显示结果为
+第1个参数的值1  ：表示匹配到的字符
+第2个参数的值3  ：表示匹配到的字符的最小索引位置
+第3个参数的值adb1afa4sdf  ：表示被匹配的字符串
+
+第1个参数的值4
+第2个参数的值7
+第3个参数的值adb1afa4sdf-->
+
+<!--5。正则表达式基本
+模式中使用所有的元字符必须进行转义，元字符包括：
+({[\^$|)?*+.]}
+(1)有两种方式创建RegExp对象
+·var pattern = new RegExp("pattern", modifiers);
+第一种方式中，pattern部分以js的字符串形式存在，需要使用单引号或者双引号括起来，第二种不使用引号
+·var pattern = /pattern/modifiers;
+
+(2)js的正则表达式是在字符串中的,\是js中的转义符， \也是正则中的转义符，如果只加一个\的话
+，只能说明在字符串中转义，而js需要进一步把字符串中的\变成正则表达式中的\,更深一层的意思，
+所以在js中，\\就是正则表达式中的转义符？？？
+
+(3) //第一个参数需要使用小括号括起来，表示分组？？？
+    //这里小括号没有使用转义字符，就表示查找的内容只有s，不包括括号
+-->

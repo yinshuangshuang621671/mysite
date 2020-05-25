@@ -1,0 +1,32 @@
+{#第一种#}
+{#{{ comment_text|safe }}#}
+
+{#第二种#}
+{% autoescape off %}
+    <p style="font-weight: bolder">{{ comment_text|safe }}</p>
+
+    {# 本地地址要加上去！ 不然地址不完整 #}
+    {# 不过点击后跳不到那个页面呢？？？ #}
+    <a href="http://localhost:8000{{ url }}">点击查看</a>
+{% endautoescape %}
+
+<!-- 1. html转义
+ 转义就是将html语言的关键字过滤掉，例如<div> 就是html的关键字
+ 如果要在html页面上呈现<div> ,源代码就必须是&lt;div&gt; (即使用转义字符表示)
+
+ 2. django中应该是提供自动转义操作，ckeditor中获取到的text文本会自动带有p标签，存储到数据库中。
+ django自带的转义会在模板显示的时候将p标签先进行转义，这样在前端显示的时候就会将标签显示出来了
+
+·在评论列表中，如果后面不加safe, 那生成的html代码就是
+ &lt;p&gt;咔咔咔咔咔咔扩扩扩扩扩扩扩扩扩&lt;/p&gt;
+ 即django在html进行解释之前会将html标签进行转义，这样html执行的时候就会显示p标签
+·如果加了safe,django不自动转义，那么生成的html代码就是：
+<p>咔咔咔咔咔咔扩扩扩扩扩扩扩扩扩</p>
+这样html执行的时候就会不会显示p标签，会将p标签作为管关键字进行解释执行，
+
+
+ 3. (1)safe过滤器：禁用转义，告诉模板这个变量是安全的，可以解释执行，django就不会自动进行转义
+ 直接解释执行html标签
+ (2)使用 {% autoescape off %}... {% endautoescape %}
+ 使用代码块，里面还可以对样式进行设计
+ -->

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+
+{% block title %}
+    我的网站|错误
+{% endblock %}
+
+{% block nav_home_active %}
+{# 点亮首页标志 #}
+    active
+{% endblock %}
+
+{#css 样式替换#}
+{% block header_extends %}
+    <link rel="stylesheet" href="{% static 'home.css' %}">
+{% endblock %}
+
+
+{#内容替换#}
+{% block content %}
+    {{ message }}
+    <a href="{{ redirect_to }}">返回</a>
+{% endblock %}
+

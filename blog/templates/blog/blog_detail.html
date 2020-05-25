@@ -1,0 +1,446 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+{#加载公用模板#}
+{% load comment_tags %}
+{% load like_tags %}
+
+{% block title %}
+    {{ blog.title }}
+{% endblock %}
+
+{#css样式模板引用#}
+{% block header_extends%}
+    <link rel="stylesheet" href="{% static 'blog/blog.css' %}">
+    {#  为forms表单准备  #}
+    <script type="text/javascript" src="{% static "ckeditor/ckeditor-init.js"%}"></script>
+    <script type="text/javascript" src="{% static "ckeditor/ckeditor/ckeditor.js" %}"></script>
+{% endblock %}
+
+
+{% block nav_blog_active %}
+    active
+{% endblock %}
+
+{#页面内容#}
+{% block content %}
+    <div class="container">
+        <div class="row">
+            <div class="col-xs-10 col-xs-offset-1">
+                <h3>{{ blog.title }}</h3>
+
+                <ul class="blog-info-description">
+                    <li>作者：{{ blog.author }}</li>
+                    <li>发表日期：{{ blog.created_time | date:"Y-m-d H:i:s"}}</li>
+                    <li>分类：<a href={% url "blogs_with_type" blog.blog_type.pk %}>{{ blog.blog_type }}</a></li>
+                    {# 原始写法，也是可以的： <li>阅读：({{ blog.get_read_num }}) </li>#}
+                    <li>阅读：({% get_read_num blog %}) </li>
+                    {# 统计评论数，使用公用模板方式 #}
+                    <li>评论：({% get_comment_count blog %})</li>
+                </ul>
+                <div class="blog-content">{{ blog.content|safe }}</div>
+                {# 点赞：不太懂 #}
+                <div class="like" onclick="likeChange(this, '{% get_content_type blog %}', {{ blog.pk }})">
+                    {# 点赞手势 active:动态获取 如果人点过赞，就显示红色 #}
+                    <span class="glyphicon glyphicon-thumbs-up {% get_like_status blog %}"></span>
+                    {# 使用公用模板 #}
+                    <span class="liked_num">{% get_like_count blog %}</span>
+                    <span>喜欢</span>
+                </div>
+
+                {# 上一篇与下一篇  #}
+                <div class="blog-more">
+                    <p>上一篇：
+                        {% if previous_blog %}
+                        {# 相对路由， 传递参数给views #}
+                            <a href="{{  previous_blog.pk }}">{{ previous_blog.title }}</a>
+                         {# 绝对路由 #}
+                         {# <a href="{% url 'blog_detail' previous_blog.pk %}">{{ previous_blog.title }}</a>#}
+                        {% else %}
+                            没有了
+                        {% endif %}
+                    </p>
+
+                    <p>下一篇：
+                        {% if next_blog %}
+                        {# 相对路由 ，只需要传递变量过去即可 #}
+                            <a href="{{ next_blog.pk }}">{{ next_blog.title }}</a>
+                        {% else %}
+                            没有了
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-xs-10 col-xs-offset-1">
+                <div class="comment-area" >
+                    <h3 class="comment-area-title">提交评论</h3>
+                    {# django  User模型自带？前端判断用户是否登录 #}
+                    {% if request.user.is_authenticated %}
+                        {# bootstrap 表单组件 #}
+                        <form id="comment_form" action="{% url 'update_comment' %}" method="POST" style="overflow: hidden">
+                            {% csrf_token %}
+                            <!--<label>{{ user.username }}，欢迎评论</label>-->
+                            <label>{{ user.get_nickname_or_username }}，欢迎评论</label>
+
+                            <div id="reply_content_container" style="display: none">
+                                <p id="reply_title">回复</p>
+                                {# 显示你要回复的评论的内容 #}
+                                <div id="reply_content"></div>
+                            </div>
+                            {# 显示表单组件，但是如果设置为隐藏就不显示 #}
+                             {# 使用公用模板替换使用views函数 #}
+                            {% get_comment_form blog as comment_form %}
+                            {% for field in comment_form %}
+                                {{ field }}
+                            {% endfor %}
+                            {# 错误信息显示区域 #}
+                            <span id="comment_error" class="text-danger pull-left"></span>
+                            <input type="submit" value="评论" class="btn btn-primary pull-right">
+                        </form>
+                    {% else %}
+                        您尚未登录，登录之后方可评论
+                        {# 使用GET方式传参数 ，不用通过路由传值 #}
+                        <a class="btn btn-primary" href="{% url 'login' %}?from={{ request.get_full_path}}">登录</a>
+                        <span>or</span>
+                        <a class="btn btn-danger" href="{% url 'register' %}?from={{ request.get_full_path}}">注册</a>
+                    {% endif %}
+                </div>
+                <div class="comment-area">
+                    <h3 class="comment-area-title">评论列表</h3>
+                    <div id="comment_list">
+                        {# 筛选parent=None =>取到的都是一级评论，不包含评论的回复 #}
+                        {% get_comment_list blog as comments %}
+                        {% for comment in comments %}
+                            <div id="root_{{ comment.pk }}" class="comment">
+                                <span>{{ comment.user.get_nickname_or_username }}</span>
+                                <span>({{ comment.comment_time|date:"Y-m-d H:i:s" }}):</span>
+                                <div id="comment_{{ comment.pk }}">
+                                    {{ comment.text|safe }}
+                                </div>
+                                <div class="like" onclick="likeChange(this, '{% get_content_type comment %}', {{ comment.pk }})">
+                                    {# 点赞手势 active:动态获取 如果人点过赞，就显示红色 #}
+                                    <span class="glyphicon glyphicon-thumbs-up {% get_like_status comment %}"></span>
+                                    {# 使用公用模板 #}
+                                    <span class="liked_num">{% get_like_count comment %}</span>
+                                </div>
+                                {# 将当前评论的主键传回去 #}
+                                <a href="javascript:reply({{ comment.pk }})">回复</a>
+
+                            {# 取出一级评论（根root）的回复评论，用的外键知识，有点绕。。。 #}
+                                {% for reply in comment.root_comment.all %}
+                                    <div class="reply">
+                                        <!--<span>{{ reply.user.username }}</span> 使用新方法替换-->
+                                        <span>{{ reply.user.get_nickname_or_username }}</span>
+                                        <span>({{ reply.comment_time|date:"Y-m-d H:i:s" }})</span>
+                                        <span>回复</span>
+                                        <!--{{ reply.reply_to.username }} 方法替换，方法不需要加括号-->
+                                        {{ reply.reply_to.get_nickname_or_username}}
+                                        {# 这个id值设置的很厉害，上下一致啊 #}
+                                        <div id="comment_{{ reply.pk }}">
+                                            {{ reply.text|safe }}
+                                        </div>
+                                        {# 点赞手势 #}
+                                        <div class="like" onclick="likeChange(this, '{% get_content_type reply %}', {{ reply.pk }})">
+                                            {# 点赞手势 active:动态获取 如果人点过赞，就显示红色 #}
+                                            <span class="glyphicon glyphicon-thumbs-up {% get_like_status reply %}"></span>
+                                            {# 使用公用模板 #}
+                                            <span class="liked_num">{% get_like_count reply %}</span>
+                                        </div>
+                                        <a href="javascript:reply({{ reply.pk }})">回复</a>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% empty %}
+                            <span id="no_comment">暂无评论</span>
+                        {% endfor %}
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        </div>
+{% endblock %}
+
+
+{# ajax表单异步提交 #}
+{% block script_extend %}
+{#      对应id值：comment_form#}
+    <script type="text/javascript">
+        //JS扩展：String.prototype.format字符串拼接功能
+        String.prototype.format = function () {
+            //最好使用var，let的作用范围有点小
+            //this.谁调用这个函数，this就指向谁
+            var str = this;
+            for (var i = 0; i < arguments.length; i++){
+                //正则表达式，全局替换，不只是替换第一处 关键词g:全局
+                //这里原来是没有加括号的，有点不理解
+                var str = str.replace(new RegExp('('+ '\\{' + i + '\\}'+ ')', 'g'), arguments[i])
+            }
+            return str;
+        };
+        //回复函数设计
+        function reply(reply_comment_id){
+            // 设置值
+            //id=reply_comment_id ：是表单中的组件，在forms中定义，在模板页面中显示
+            //id=reply_comment_id 表单初始化的默认值是0！
+            //在这里进行表单组件赋值。。。
+            $('#reply_comment_id').val(reply_comment_id);
+
+            //将你要回复的评论内容取出来，然后再一次显示出来
+            let html = $("#comment_"+reply_comment_id).html();
+            $('#reply_content').html(html);
+            $('#reply_content_container').show();
+
+            //动画:滚动条 动画移动到到哪个位置，表单距离页面顶端的偏移量再减去60
+            $('html').animate({scrollTop: $('#comment_form').offset().top - 60}, 300, function () {
+                CKEDITOR.instances['id_text'].focus();
+            });
+        }
+
+        //使得日期中，单个数字前面有0,先在前面填两个0，然后再从后往前截取两位
+        function numFormat(num) {
+            return ('00' + num).substr(-2);
+        }
+        //ajax的返回日期显示更改
+        function timeFormat(timestamp) {
+            //js是以毫秒为单位，python是以秒为单位 时间戳为10位需要乘1000,13位不需要，
+            //就是毫秒与秒之间差三位,Date 传入的参数需要是ms 所以*1000
+            //js中字符是可以直接和数字相连的，牛逼
+            //Date():直接获取当前时间为标准时间  ，传入参数并将其变为标准时间（中国标准时间）
+            let datetime = new Date(timestamp * 1000);
+            let year = datetime.getFullYear();
+            let month = numFormat(datetime.getMonth() + 1);
+            let day = numFormat(datetime.getDate());
+            let hour = numFormat(datetime.getHours());
+            let minute = numFormat(datetime.getMinutes());
+            let second = numFormat(datetime.getSeconds());
+            console.log(timestamp);
+            // Date对象显示格式（中国标准时间 Tue没用）：Tue May 12 2020 23:14:49 GMT+0800 (中国标准时间)
+            console.log(datetime);
+            //设置你想显示的日期格式
+            return year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second;
+        }
+        let error = $('#comment_error');
+        //表单提交  根据id进行选择
+        $("#comment_form").submit(function (){
+            //清掉错误信息，不显示
+            error.text('');
+            //判断评论区是否为空
+            // 这个竟然使用中括号。。。。。。
+            if(CKEDITOR.instances["id_text"].document.getBody().getText().trim()===''){
+                error.text('评论内容不能为空');
+                // 跳出代码，不继续执行
+                return false;
+            }
+            // 更新数据到textarea(富文本编辑器)
+            CKEDITOR.instances['id_text'].updateElement();
+            //主体：响应内容异步提交
+            //感觉就是包表单提交重写一遍呢？
+            $.ajax({
+                //ajax 重新给你整完再发到相应处理函数中，并接收函数执行结果
+                url: "{% url "update_comment" %}",
+                type:'POST',
+                 //jquery 输出序列化 表单值
+                //模板表单组件还是正常显示，不过提交这步转到ajax这里来了
+                //这个data是要传给views处理函数的信息！！！
+                //评论是通过初始化表单显示，同时通过POST传值给处理函数
+                data: $(this).serialize(),
+                cache: false,
+                //处理函数响应成功 data:前端传回的数据
+                success: function (data){
+                    //显示结果信息
+                    console.log(data);
+                    if(data['status'][0]==="SUCCESS"){
+                        //插入数据
+                        //判断是评论还是回复
+                        if($('#reply_comment_id').val()==='0'){
+                            //插入评论  原始
+                            //let comment_html = '<div id="root_' + data['pk'] +  '"class="comment">' +
+                                //'<span>' +  data['username'] + '</span>' +
+                                //'<span>(' + timeFormat(data['comment_time']) + '):</span>' +
+                                //'<div id="comment_' + data['pk']+ '">'
+                                 //+ data['text']+ '</div>' +
+                                //'<a href="javascript:reply(' + data['pk'] + ');">回复</a>'
+                                //+ '</div>';
+
+                            //插入评论，最新：修改新增评论后无法点赞的问题
+                            //点赞手势 新增的评论肯定无人点赞过，active肯定为空
+                            //使用公用模板 新增评论点赞数肯定为0
+                            let comment_html = '<div id="root_{0}" class="comment">' +
+                                                '<span>{1}</span>' +
+                                                '<span>({2}):</span>' +
+                                                '<div id="comment_{0}">{3}</div>' +
+                                                '<div class="like" onclick="likeChange(this, \'{4}\', {0})">' +
+                                                '<span class="glyphicon glyphicon-thumbs-up "></span>' +
+                                                '<span class="liked_num">0</span>' +
+                                                '</div>' +
+                                                '<a href="javascript:reply({0})">回复</a>' +
+                                                '</div>';
+                            comment_html = comment_html.format(data['pk'], data['username'],
+                                            timeFormat(data['comment_time']), data['text'],
+                                            data['content_type']);
+
+                            //在已经显示的评论列表前面插入
+                            $("#comment_list").prepend(comment_html);
+
+                        }else {
+                            //插入回复原始
+                            //var reply_html = '<div class="reply"> ' +
+                                //'<span>'+ data['username'] + '</span>'+
+                                //'<span>(' + timeFormat(data['comment_time']) + ')</span>' +
+                                //'<span>回复</span>' +
+                                //'<span>' + data['reply_to']+ '</span>' +
+                                //'<div id="comment_' + data['pk']+ '">'
+                                    //+ data['text']+
+                                //'</div> ' +
+                                //'<a href="javascript:reply(' + data['pk']+ ')">回复</a>' +
+                                //'</div>';
+                            //插入回复：修改
+                            let reply_html = '<div class="reply">' +
+                                '<span>{1}</span>' +
+                                '<span>({2})</span>' +
+                                '<span>回复</span>' +
+                                '<span>{3}:</span>' +
+                                '<div id="comment_{0}">{4}</div>' +
+                                '<div class="like" onclick="likeChange(this, \'{5}\', {0})">' +
+                                '<span class="glyphicon glyphicon-thumbs-up "></span>' +
+                                '<span class="liked_num">0</span>' +
+                                '</div>' +
+                                '<a href="javascript:reply({0})">回复</a>' +
+                                '</div>';
+                            reply_html = reply_html.format(data['pk'], data['username'],
+                                        timeFormat(data['comment_time']), data['reply_to'],
+                                            data['text'], data['content_type']);
+
+                            $("#root_" + data['root_pk']).append(reply_html);
+                        }
+                        // 评论内容添加到下面列表后，清空编辑框内的内容
+                        CKEDITOR.instances['id_text'].setData('');
+                        $('#reply_content_container').hide();
+                        //重新设置为0，下次可以直接评论 reply_comment_id=0
+                        $('#reply_comment_id').val('0');
+                        $("#no_comment").remove();
+                        error.text('评论成功')
+                    }
+                    else{
+                        //显示错误信息
+                        error.text(data['message']);
+                    }
+                },
+                error: function (xhr) {
+                    console.log(xhr);
+                }
+            });
+            // 阻止它点击直接提交的动作submit，不太懂
+            return false;
+        });
+
+        //点赞或者取消点赞
+        function likeChange(obj, content_type, object_id) {
+            //判定是点赞还是取消点赞，两种情况？？？
+            //等号右边返回 布尔值  等号右边为0，没有active,表示要进行点赞
+            //如果等号右边不是0，表示有active，表示要取消点赞
+            let  is_like = obj.getElementsByClassName('active').length ===0;
+            $.ajax({
+                url:"{% url 'like_change' %}",
+                //不用POST的原因？
+                type:'GET',
+                //返回给前端的数据，注意content_type是字符串！！！
+                data:{
+                    content_type:content_type,
+                    object_id:object_id,
+                    is_like:is_like,
+                },
+                cache:false,
+                success:function (data) {
+                    console.log(data);
+                    if (data['status'] ==='SUCCESS'){
+                        //更新点赞状态
+                        let element = $(obj.getElementsByClassName('glyphicon'));
+                        if (is_like){
+                            element.addClass('active')
+                        }
+                        else{
+                            element.removeClass('active')
+                        }
+                        //更新点赞数量
+                        let liked_num = $(obj.getElementsByClassName('liked_num'));
+                        liked_num.text(data['liked_num']);
+                }else{
+                        //views函数验证失败，如果是用户未登录的原因，就弹出模态框登录
+                        if(data['code'] === 400){
+                            //用户未登录，弹出登录模态框
+                            //这里将模态框的代码及处理函数放到了base.html公用模板中，show进行显示
+                            $('#login_modal').modal('show')
+                        }else {
+                            alert(data['message']);
+                        }
+                    }
+                },
+                error:function (xhr) {
+
+                    console.log(xhr)
+                }
+            });
+        }
+    {# 将登录模态框的函数代码及模态框的代码迁移至base.html，变得公用 #}
+
+    </script>
+{% endblock %}
+
+
+{# 区别于模板不同的内容，使用模板嵌套进行替换 #}
+{#<title>{{ blog.title }}</title>#}
+
+{#    <h3>{{ blog.title }}</h3>#}
+{#    <p>作者：{{ blog.author }}</p>#}
+{#    <p>发表日期：{{ blog.created_time | date:"Y-m-d H:i:s"}}</p>#}
+{#    <p>分类：#}
+{#        <a href={% url "blogs_with_type" blog.blog_type.pk %}>#}
+{#            {{ blog.blog_type }}#}
+{#        </a>#}
+{#    </p>#}
+{#    <p>{{ blog.content }}</p>#}
+
+
+{#1. 相对路由与绝对路由#}
+{#相对路由;<a href="{{  previous_blog.pk }}">{{ previous_blog.title }}</a>#}
+{#绝对路由：<a href="{% url 'blog_detail' previous_blog.pk %}">{{ previous_blog.title }}</a>#}
+{#个人理解就是：哪个模板找views中的哪个方法，相对路由就是不通过显式url，直接返回相应的views中#}
+{#的处理函数，而且相对路由只需要写明传递的参数即可！！！。而绝对路由就是显示路由传值 #}
+
+
+{#2. safe过滤器：#}
+{#防止页面乱码，且可以将文本中的html语句进行转化，渲染到浏览器中#}
+{#当有多个浏览器的时候，最好将safe放在最后面，否则可能出现乱码#}
+
+{#3. request.user.is_authenticated#}
+{#    request.user，是可以直接写user的，django自带的方法auth，直接返回user #}
+{#    在设置文件中的模板中，自带的方法，直接返回的值，直接拿来用就可以 #}
+{#    感觉也可以理解这个用户认证是django自带的一个模块#}
+
+{# 3. ajax是一种不刷新页面的异步提交方式 #}
+{# console.log(data);显示数据格式，注意每一个返回的都是字符串，需要加个[0],好坑。。。#}
+{#{status: Array(1), username: Array(1), comment_time: Array(1), text: "<p>嘎嘎嘎嘎嘎过过过过过过过过过过过过过过过过过</p>"}#}
+
+
+{#4. #}
+{#取出一级评论的回复评论，用的外键知识，有点绕。。。 #}
+{#{% for reply in comment.root_comment.all %}#}
+{#    {{ reply.text }}#}
+{#{% endfor %}#}
+{#理解：博客中有博客类型这一外键，使用外键反向关联就可以得到某个博客类型包含多少条博客，#}
+{#这个也是一样。不同的是这个关联的外键是自身（实例化对象comment），所以comment.root_comment  #}
+{#就可以得到以这个评论为根（root）的回复有多少，然后取出回复数据。是有点绕 #}
+
+{#5. offest()函数#}
+{#返回或设置匹配元素相对于文档的偏移量（位置），返回的对象中包含两个数值top和left#}
+
+
+{#6. 这个日期需要看一看 #}
+
+{#7. var与let的区别：var全局，let只在大括号中起作用！！#}
+
+<!-- 模板中调用方法，方法不需要加括号-->

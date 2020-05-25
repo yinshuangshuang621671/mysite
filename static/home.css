@@ -1,0 +1,27 @@
+h3.home-content{
+    font-size: 222%;
+    /*{# 设置h3在屏幕中央 #}*/
+    /*position: absolute;*/
+    /*left: 50%;*/
+    /*top: 50%;*/
+    /*transform: translate(-50%, -50%);*/
+
+    text-align: center;
+    margin-top: 4em;
+    margin-bottom: 2em;
+
+}
+
+div#container{
+    /*上下margin是0，左右margin是auto*/
+    margin:0 auto;
+    height: 20em;
+    /*这样设置最大最小值，使得宽度可以自动适应*/
+    min-width: 20em;
+    max-width: 30em;
+}
+
+div.hot-data{
+    text-align: center;
+    margin-top: 2em;
+}

@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+
+{% block title %}
+    我的网站|注册
+{% endblock %}
+
+{% block nav_home_active %}
+{# 点亮首页标志 #}
+    active
+{% endblock %}
+
+{#css 样式替换#}
+{% block header_extends %}
+    <link rel="stylesheet" href="{% static 'home.css' %}">
+{% endblock %}
+
+
+{#内容替换#}
+{% block content %}
+{#  使用容器栅格布局  #}
+    <div class="container">
+        <div class="row">
+            <div class="col-xs-4 col-xs-offset-4">
+                {# 如果用户未登录，进行注册 #}
+                {% if not user.is_authenticated %}
+                    {#  使用panel面板布局  #}
+                    <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">注册</h3>
+                    </div>
+                    <div class="panel-body">
+                        {#  action为空，指向当前视图，就当前的处理函数  #}
+                        <form action="" method="POST">
+                            {% csrf_token %}
+                            {#  自动转换为html代码 #}
+{#                            {{ login_form }}     #}
+                            {% for field in reg_form %}
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {# 适用于单个字段验证，显示单字段错误信息 #}
+                                <p class="text-danger">{{ field.errors.as_text }}</p>
+                            {% endfor %}
+                            {# 全局错误信息提示，不是单个字段提示 #}
+                             <span class=" text-danger" >{{ reg_form.non_field_errors }}</span>
+                             <!--清除浮动，布局问题，查一下-->
+                             <div class="clearfix"></div>
+
+                             <button id="send_code" class="btn btn-primary pull-left">
+                                 发送验证码
+                             </button>
+                             <input type="submit" value="注册" class="btn btn-primary pull-right">
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                    <span>已登录， 跳转到首页...</span>
+                        <script type="text/javascript">
+                            function direct(){
+                                window.location.href = '/';
+                            }
+                            //js中按毫秒，python中按秒计数，所以乘以1000
+                            setTimeout('direct()', 3000);
+                        </script>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+
+{% block script_extend %}
+    <script type="text/javascript">
+        //点击按钮，发送验证码
+        $("#send_code").click(function () {
+            // #send_code
+            console.log(this);
+
+            //获取邮箱输入框的值：val()函数
+            var email = $("#id_email").val();
+
+            if (email === ''){
+                $("#tip").text('* 邮箱不能为空 *');
+                return false
+            }
+            // 转向views中的函数：将相关数据传入，向邮箱发送验证码
+            $.ajax({
+                url: '{% url 'send_verification_code' %}',
+                type: 'GET',
+                data: {
+                    //将要绑定的邮箱传递过去
+                    'email': email,
+                    'send_for': 'register_code',
+                },
+                cache:false,
+                success: function (data) {
+                    if (data['status'] === 'ERROR'){
+                        alert(data['status']);
+                    }
+                }
+            });
+
+            //点击完发送验证码后将按钮变灰，无法再次点击
+            $(this).addClass('disabled');
+            $(this).attr('disabled', true);
+
+            // 计时器30s，之后按钮恢复原状
+            var time = 30;
+            $(this).text(time + 's');
+
+            //每一秒执行{}里面的代码,JS是毫秒，python是秒
+            //不过下面这个不能使用function，而是要用箭头函数，有点迷
+            //如果使用function 的话，this就指向window了应该。
+            var interval = setInterval(()=>{
+                // #send_code,外层作用域的this
+                console.log(this);
+                //setInterval() 函数会一直运行，直到倒计时结束，恢复按钮样式
+                if(time <= 0){
+                    // 删除计时器
+                    clearInterval(interval);
+                    // 按钮样式修改
+                    $(this).removeClass('disabled');
+                    $(this).attr('disabled', false);
+                    $(this).text('发送验证码');
+                    // 退出
+                    return false;
+                }
+                time --;
+                $(this).text(time+ 's');
+            }, 1000);
+
+
+        })
+    </script>
+{% endblock %}
+
+
+{#1. form表单中，action=" "：#}
+{#就指向当前视图，在视图中通过判断method是GET还是POST进行处理#}
+
+{#2. {{ field.id_for_label }}:自定义字段标签的id#}
+
+
+

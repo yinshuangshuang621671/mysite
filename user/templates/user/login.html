@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+
+{% block title %}
+    我的网站|登录
+{% endblock %}
+
+{% block nav_home_active %}
+{# 点亮首页标志 #}
+    active
+{% endblock %}
+
+{#css 样式替换#}
+{% block header_extends %}
+    <link rel="stylesheet" href="{% static 'home.css' %}">
+{% endblock %}
+
+
+{#内容替换#}
+{% block content %}
+{#  使用容器栅格布局  #}
+    <div class="container">
+        <div class="row">
+            <div class="col-xs-4 col-xs-offset-4">
+                {# 如果用户未登录，进入登录页面 #}
+                {% if not user.is_authenticated %}
+                {#  使用panel面板布局  #}
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <h3 class="panel-title">登录</h3>
+                        </div>
+                        <div class="panel-body">
+                            {#  action为空，指向当前视图，就当前的处理函数  #}
+                            {# 在这里进行表单组件的输入，然后再传递给views处理函数。。。逻辑有点乱 #}
+                            <form action="" method="POST">
+                                {% csrf_token %}
+                                {#  自动转换为html代码 #}
+    {#                            {{ login_form }}     #}
+                                {% for field in login_form %}
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    <p class="text-danger">{{ field.errors.as_text }}</p>
+                                {% endfor %}
+                                {# 错误信息，不太懂？？？ #}
+                                <span class="pull-left text-danger" >
+                                    {{ login_form.non_field_errors }}
+                                </span>
+                                <div class="clearfix"></div>
+
+                                <a href="{% url 'forgot_password' %}" class="pull-left">忘记密码</a>
+
+                                <input type="submit" value="登录" class="btn btn-primary pull-right">
+                            </form>
+                        </div>
+                    </div>
+                {% else %}
+                    <span>已登录， 跳转到首页...</span>
+                        <script type="text/javascript">
+                            function direct(){
+                                window.location.href = '/';
+                            }
+                            //js中按毫秒，python中按秒计数，所以乘以1000
+                            setTimeout('direct()', 3000);
+                        </script>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+{% endblock %}
+
+
+{#1. form表单中，action=" "：#}
+{#就指向当前视图，在视图中通过判断method是GET还是POST进行处理#}
+
+{#2. {{ field.id_for_label }}:自定义字段标签的id #}
+
+{# 3. class="pull-left text-danger"  ：使用的是bootstrap的自带样式 #}
+
+{# 4. 点击登录页面后，会跳转到来时候的页面，如果点击完登录再点击注册， #}
+{# 那注册完之后就会跳转到之前登录的页面，所以在登录及注册页面进行用户是否登录的判断！！ #}
